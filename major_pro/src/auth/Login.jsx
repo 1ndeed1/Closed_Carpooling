@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { jwtDecode } from "jwt-decode";
 import api from "../api/api";
 
 export default function Login() {
@@ -18,9 +19,20 @@ export default function Login() {
         password,
       });
 
-      localStorage.setItem("token", res.data.token);
-      localStorage.setItem("role", res.data.role);
-      localStorage.setItem("isAdmin", res.data.isAdmin);
+      const token = res.data.token;
+
+      // store token
+      localStorage.setItem("token", token);
+
+      // decode JWT
+      const decoded = jwtDecode(token);
+
+      console.log("JWT PAYLOAD:", decoded);
+
+      // store decoded values
+      localStorage.setItem("role", decoded.role);
+      localStorage.setItem("orgStatus", decoded.orgStatus);
+      localStorage.setItem("userId", decoded.id);
 
       navigate("/dashboard");
     } catch (err) {

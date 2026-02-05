@@ -19,6 +19,7 @@ async function startServer() {
     app.use("/api/rides", require("./routes/rides"));
     app.use("/api/org", require("./routes/organization"));
     app.use("/api/friends", require("./routes/friends"));
+    app.use("/api/metrics", require("./routes/metrics"));
 
     app.post("/test", (req, res) => 
       {

@@ -82,4 +82,19 @@ router.post("/:id/request", auth, async (req, res) => {
   res.json({ message: "Joined ride successfully" });
 });
 
+// GET DRIVER'S RIDES WITH PASSENGERS
+router.get("/driver", auth, async (req, res) => {
+  try {
+    const rides = await Ride.find({ driver: req.user.id })
+      .populate("passengers", "name email")
+      .sort({ createdAt: -1 });
+
+    res.json(rides);
+  } catch (err) {
+    console.error("DRIVER RIDES ERROR:", err);
+    res.status(500).json({ message: "Failed to fetch driver rides" });
+  }
+});
+
+
 module.exports = router;
