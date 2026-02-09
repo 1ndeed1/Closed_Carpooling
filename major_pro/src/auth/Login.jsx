@@ -34,6 +34,14 @@ export default function Login() {
       localStorage.setItem("orgStatus", decoded.orgStatus);
       localStorage.setItem("userId", decoded.id);
 
+      // 🔑 REQUIRED FOR ORG SYSTEM
+      if (decoded.organization) {
+        localStorage.setItem("organization", decoded.organization);
+      }
+
+      localStorage.setItem("isAdmin", decoded.isAdmin ? "true" : "false");
+
+
       navigate("/dashboard");
     } catch (err) {
       alert("Login failed");
