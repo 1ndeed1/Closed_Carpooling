@@ -4,15 +4,13 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 
 const router = express.Router();
+const validate = require("../middleware/validate");
+const { registerSchema, loginSchema } = require("../middleware/validators");
 
 // REGISTER
-router.post("/register", async (req, res) => {
+router.post("/register", validate(registerSchema), async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
-
-    if (!name || !email || !password || !role) {
-      return res.status(400).json({ message: "Missing fields" });
-    }
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -33,12 +31,12 @@ router.post("/register", async (req, res) => {
     res.json({ message: "Registered successfully" });
   } catch (err) {
     console.error("REGISTER ERROR:", err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: err.message });
   }
 });
 
 // LOGIN
-router.post("/login", async (req, res) => {
+router.post("/login", validate(loginSchema), async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -55,9 +53,11 @@ router.post("/login", async (req, res) => {
     const token = jwt.sign(
       {
         id: user._id,
+        email: user.email,
         role: user.role,
         organization: user.organization,
-        orgStatus: user.orgStatus
+        orgStatus: user.orgStatus,
+        isAdmin: user.isAdmin
       },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
@@ -66,7 +66,38 @@ router.post("/login", async (req, res) => {
     res.json({ token });
   } catch (err) {
     console.error("LOGIN ERROR:", err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: err.message });
+  }
+});
+
+const auth = require("../middleware/auth");
+
+// GET CURRENT USER
+router.get("/me", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("-password").populate("organization");
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ message: "Failed to fetch user" });
+  }
+});
+
+// UPDATE PROFILE
+router.patch("/me", auth, async (req, res) => {
+  try {
+    const { name, role } = req.body;
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (name) user.name = name;
+    if (role) user.role = role;
+    if (req.body.homeLocation) user.homeLocation = req.body.homeLocation;
+    if (req.body.workLocation) user.workLocation = req.body.workLocation;
+
+    await user.save();
+    res.json({ message: "Profile updated", user });
+  } catch (err) {
+    res.status(500).json({ message: "Update failed" });
   }
 });
 

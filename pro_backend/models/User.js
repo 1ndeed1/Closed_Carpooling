@@ -29,7 +29,19 @@ const UserSchema = new mongoose.Schema({
   }],
 
   // 🔹 Admin
-  isAdmin: { type: Boolean, default: false }
+  isAdmin: { type: Boolean, default: false },
+
+  // 🔹 Favorite Places
+  homeLocation: {
+    lat: Number,
+    lng: Number,
+    address: String
+  },
+  workLocation: {
+    lat: Number,
+    lng: Number,
+    address: String
+  }
 
 }, { timestamps: true });
 

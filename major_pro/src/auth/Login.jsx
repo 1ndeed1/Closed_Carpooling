@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { jwtDecode } from "jwt-decode";
 import api from "../api/api";
+import { useUser } from "../components/UserContext";
+import toast from "react-hot-toast";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { login } = useUser();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -20,58 +22,64 @@ export default function Login() {
       });
 
       const token = res.data.token;
+      login(token);
 
-      // store token
-      localStorage.setItem("token", token);
-
-      // decode JWT
-      const decoded = jwtDecode(token);
-
-      console.log("JWT PAYLOAD:", decoded);
-
-      // store decoded values
-      localStorage.setItem("role", decoded.role);
-      localStorage.setItem("orgStatus", decoded.orgStatus);
-      localStorage.setItem("userId", decoded.id);
-
-      // 🔑 REQUIRED FOR ORG SYSTEM
-      if (decoded.organization) {
-        localStorage.setItem("organization", decoded.organization);
-      }
-
-      localStorage.setItem("isAdmin", decoded.isAdmin ? "true" : "false");
-
-
+      toast.success("Welcome back!");
       navigate("/dashboard");
     } catch (err) {
-      alert("Login failed");
+      toast.error(err.response?.data?.message || "Login failed");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="container">
-      <h2>Login</h2>
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="glass-card w-full max-w-md p-8">
+        <div className="text-center mb-8">
+          <h2 className="text-3xl font-bold text-gray-800">Welcome Back</h2>
+          <p className="text-gray-500 mt-2">Sign in to your closed carpool network</p>
+        </div>
 
-      <form onSubmit={handleLogin}>
-        <input
-          placeholder="Email"
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
+        <form onSubmit={handleLogin} className="space-y-5">
+          <div>
+            <input
+              className="glass-input"
+              type="email"
+              placeholder="Email address"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
 
-        <input
-          type="password"
-          placeholder="Password"
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
+          <div>
+            <input
+              className="glass-input"
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
 
-        <button disabled={loading}>
-          {loading ? "Logging in..." : "Login"}
-        </button>
-      </form>
+          <button className="glass-button" disabled={loading} style={{ marginTop: '24px' }}>
+            {loading ? "Logging in..." : "Login"}
+          </button>
+        </form>
+
+        <div className="mt-8 text-center">
+          <p className="text-gray-500 mb-4 cursor-default">Don’t have an account?</p>
+          <button
+            className="glass-button-secondary"
+            type="button"
+            onClick={() => navigate("/register")}
+          >
+            Create an Account
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
