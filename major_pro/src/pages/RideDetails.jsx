@@ -1,9 +1,10 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/api";
-import { GoogleMap, useJsApiLoader, Polyline, Marker, Autocomplete } from "@react-google-maps/api";
+import { GoogleMap, useJsApiLoader, Polyline, Marker } from "@react-google-maps/api";
 import { GOOGLE_MAPS_LIBRARIES } from "../api/googleMapsConfig";
 import { useUser } from "../components/UserContext";
+import LocationPicker from "../components/LocationPicker";
 import toast from "react-hot-toast";
 
 const mapContainerStyle = { height: "400px", width: "100%" };
@@ -161,7 +162,7 @@ export default function RideDetails() {
                     </button>
                     <div className="flex items-center gap-3">
                         <span className={`px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-sm ${ride.status === 'active' ? 'bg-green-100 text-green-700 animate-pulse' :
-                                ride.status === 'completed' ? 'bg-gray-100 text-gray-700' : 'bg-blue-100 text-blue-700'
+                            ride.status === 'completed' ? 'bg-gray-100 text-gray-700' : 'bg-blue-100 text-blue-700'
                             }`}>
                             ● {ride.status}
                         </span>
@@ -387,59 +388,28 @@ export default function RideDetails() {
                                 <p className="text-[10px] font-black text-gray-800 uppercase tracking-widest">Pick on Map</p>
                             </button>
                         </div>
-                        <div className="relative">
-                            <Autocomplete
-                                onLoad={(ref) => autocompleteRef.current = ref}
-                                onPlaceChanged={() => {
-                                    const place = autocompleteRef.current.getPlace();
-                                    if (place.geometry) {
-                                        const newLoc = {
-                                            lat: place.geometry.location.lat(),
-                                            lng: place.geometry.location.lng()
-                                        };
-                                        setTempPin(newLoc);
-                                    }
-                                }}
-                            >
-                                <input
-                                    type="text"
-                                    placeholder="Search your location..."
-                                    className="w-full bg-gray-50 border border-gray-100 p-4 rounded-2xl text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-red-500/20 transition-all shadow-inner"
-                                />
-                            </Autocomplete>
+                        <div className="bg-gray-50/50 p-4 rounded-[2rem] border border-gray-100 shadow-inner">
+                            <LocationPicker
+                                label="Deploy Custom Hub"
+                                value={tempPin || { address: "" }}
+                                onChange={setTempPin}
+                                showFavorites={false}
+                            />
                         </div>
-                        {tempPin && (
-                            <div className="space-y-4 animate-in slide-in-from-top-2">
-                                <div className="h-[200px] rounded-2xl overflow-hidden border border-gray-100 shadow-inner">
-                                    <GoogleMap
-                                        mapContainerStyle={{ height: "100%", width: "100%" }}
-                                        center={tempPin}
-                                        zoom={15}
-                                        onClick={(e) => setTempPin({ lat: e.latLng.lat(), lng: e.latLng.lng() })}
-                                        options={{ disableDefaultUI: true, zoomControl: true }}
-                                    >
-                                        <Marker
-                                            position={tempPin}
-                                            draggable
-                                            onDragEnd={(e) => setTempPin({ lat: e.latLng.lat(), lng: e.latLng.lng() })}
-                                            icon={{
-                                                url: "https://cdn-icons-png.flaticon.com/512/2830/2830305.png",
-                                                scaledSize: new window.google.maps.Size(40, 40)
-                                            }}
-                                        />
-                                    </GoogleMap>
-                                </div>
+
+                        {tempPin && tempPin.lat && (
+                            <div className="animate-in slide-in-from-top-2">
                                 <button
                                     onClick={() => {
                                         setPassengerLoc(tempPin);
                                         passengerLocRef.current = tempPin;
                                         setTempPin(null);
                                         setIsLocModalOpen(false);
-                                        toast.success("Manual Hub Established");
+                                        toast.success("Mission Intelligence Updated");
                                     }}
-                                    className="w-full bg-red-500 py-4 rounded-2xl text-white font-black uppercase tracking-widest text-xs hover:bg-red-600 shadow-xl shadow-red-100 transition-all"
+                                    className="w-full bg-red-500 py-4 rounded-2xl text-white font-black uppercase tracking-widest text-xs hover:bg-red-600 shadow-xl shadow-red-100 transition-all active:scale-[0.98]"
                                 >
-                                    Confirm Hub Location
+                                    Lock Coordinates
                                 </button>
                             </div>
                         )}

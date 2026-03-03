@@ -14,9 +14,18 @@ const UserSchema = new mongoose.Schema({
   },
   orgStatus: {
     type: String,
-    enum: ["none", "pending", "approved"],
+    enum: ["none", "pending", "verified", "approved"],
     default: "none"
   },
+
+  // 🔹 OTP Verification
+  otp: String,
+  otpExpires: Date,
+
+  // 🔹 Professional Credentials
+  phoneNumber: String,
+  employeeId: String,
+  googleId: String,
 
   // 🔹 Friend system
   friends: [{

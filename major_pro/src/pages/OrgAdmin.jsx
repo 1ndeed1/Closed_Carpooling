@@ -141,7 +141,10 @@ export default function OrgAdmin() {
                       </div>
                       <div>
                         <p className="font-black text-gray-800">{u.name}</p>
-                        <p className="text-xs font-bold text-gray-400 tracking-tight">{u.email}</p>
+                        <p className="text-[10px] font-bold text-gray-400 tracking-tight flex items-center gap-2 uppercase">
+                          📧 {u.email} | 📱 {u.phoneNumber || "N/A"}
+                        </p>
+                        <p className="text-[10px] font-black text-red-500 tracking-widest uppercase mt-1">ID: {u.employeeId || "UNKNOWN"}</p>
                       </div>
                     </div>
                     <button
