@@ -92,7 +92,7 @@ export default function OrgAdmin() {
               </div>
               <div className="glass-card p-6 border-white/60">
                 <p className="text-[10px] uppercase font-black text-gray-400 tracking-widest mb-1">ACTIVE NOW</p>
-                <p className="text-3xl font-black text-red-500 animate-pulse">2</p>
+                <p className="text-3xl font-black text-red-500 animate-pulse">{metrics.activeRides || 0}</p>
               </div>
               <div className="glass-card p-6 border-white/60">
                 <p className="text-[10px] uppercase font-black text-gray-400 tracking-widest mb-1">COMMUNITY</p>

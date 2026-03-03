@@ -1,10 +1,13 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "../components/UserContext";
 import DriverRides from "../rides/DriverRides";
 import PassengerRides from "../rides/PassengerRides";
 import MetricsSummary from "../components/MetricsSummary";
 import OrgAdmin from "../pages/OrgAdmin";
+import LocationPicker from "../components/LocationPicker";
+import api from "../api/api";
+import toast from "react-hot-toast";
 
 export default function UserDashboard() {
   const navigate = useNavigate();
@@ -18,83 +21,68 @@ export default function UserDashboard() {
 
   const { role = "passenger", orgStatus = "none", isAdmin = false, email = "" } = user;
 
-  // 🔴 USER NOT IN ANY ORGANIZATION
-  if (orgStatus === "none") {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-6">
-        <div className="glass-card max-w-md w-full p-8 text-center text-gray-800">
-          <h2 className="text-2xl font-bold mb-4 text-red-600">
-            Organization Required
-          </h2>
-          <p className="text-gray-500 mb-8">
-            This is a closed carpooling system.
-            You must join an approved organization to create or join rides.
-          </p>
+  // Use local state for Hub to ensure smooth typing
+  const [hubValue, setHubValue] = useState(user?.homeLocation || { address: "" });
 
-          <button
-            onClick={() => navigate("/organizations")}
-            className="glass-button"
-          >
-            Request Access
-          </button>
+  useEffect(() => {
+    if (user?.homeLocation) {
+      setHubValue(user.homeLocation);
+    }
+  }, [user?.homeLocation]);
 
-          <div className="mt-6">
-            <button
-              onClick={logout}
-              className="text-sm font-semibold text-red-500 hover:text-red-700 underline"
-            >
-              Logout
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // 🔴 CONDITIONAL UI FOR UNAPPROVED USERS
+  const isUnapproved = orgStatus === "none" || orgStatus === "pending";
 
-  // 🟡 USER WAITING FOR APPROVAL
-  if (orgStatus === "pending") {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-6">
-        <div className="glass-card max-w-md w-full p-8 text-center text-gray-800">
-          <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-red-100 animate-pulse text-2xl font-bold text-red-500">
-            {localStorage.getItem("email")?.charAt(0).toUpperCase()}
-          </div>
-          <h2 className="text-2xl font-bold mb-4">
-            Approval Pending
-          </h2>
-          <p className="text-gray-500 mb-8">
-            Your request to join an organization is under review.
-            You will gain access once approved by the organization admin.
-          </p>
-
-          <button
-            onClick={logout}
-            className="glass-button-secondary"
-          >
-            Logout
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // 🟢 APPROVED USERS — FULL ORG DASHBOARD
+  // 🟢 MAIN DASHBOARD
   return (
     <div className="min-h-screen p-6">
       <div className="max-w-5xl mx-auto space-y-8">
 
+        {/* UNAPPROVED NOTICE BANNER */}
+        {isUnapproved && (
+          <div className="animate-in slide-in-from-top-4 duration-700">
+            <div className="glass-card p-6 bg-gradient-to-r from-red-500 to-red-600 border-none text-white shadow-xl shadow-red-200/50 flex flex-col md:flex-row items-center justify-between gap-6 overflow-hidden relative group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-1000" />
+              <div className="relative z-10 flex items-center gap-5">
+                <div className="w-14 h-14 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center text-2xl shadow-inner">
+                  🏢
+                </div>
+                <div>
+                  <h2 className="text-xl font-black uppercase tracking-tighter">Organization Access Required</h2>
+                  <p className="text-xs font-bold text-red-100/80 uppercase tracking-widest mt-1">
+                    {orgStatus === 'none' ? 'Join your workplace to unlock official commuter routes' : 'Your access request is currently under review'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => navigate("/organizations")}
+                className="relative z-10 px-8 py-3 bg-white text-red-600 font-black text-xs uppercase tracking-widest rounded-xl hover:bg-red-50 transition-all shadow-lg active:scale-95"
+              >
+                {orgStatus === 'none' ? 'Request Clearance' : 'Check Status'}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* HEADER */}
         <header className="glass-card p-6 flex justify-between items-center bg-white/60">
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">
-              Carpool Dashboard
+            <h1 className="text-2xl font-black text-gray-800 tracking-tighter uppercase">
+              {role === 'driver' ? '📡 Mission Control' : '🚀 Commuter Hub'}
             </h1>
-            <p className="text-sm text-gray-500 capitalize font-medium mt-1">
-              {role === 'driver' ? '🚗 Driver mode' : '👋 Passenger mode'}
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">
+              Organization Dashboard — {role} Unit
             </p>
           </div>
 
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate("/friends")}
+              className="bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold py-2 px-4 rounded-xl shadow-sm border border-amber-100 transition-all text-sm flex items-center gap-2"
+            >
+              <span>🤝</span> Friend Pool
+            </button>
+
             <button
               onClick={() => navigate("/profile")}
               className="bg-gray-50 hover:bg-gray-100 text-gray-600 font-bold py-2 px-4 rounded-xl shadow-sm border border-gray-100 transition-all text-sm flex items-center gap-2"
@@ -207,20 +195,72 @@ export default function UserDashboard() {
         {/* PASSENGER VIEW */}
         {role === "passenger" && (
           <div className="space-y-8">
-            <section className="glass-card p-8 space-y-6">
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center border-b border-gray-200/50 pb-4 gap-4">
-                <h2 className="text-xl font-bold text-gray-800">Your Journeys</h2>
-                <button
-                  onClick={() => navigate("/find-ride")}
-                  className="glass-button m-0"
-                  style={{ width: "auto" }}
-                >
-                  Find a Ride
-                </button>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* HUB SECTION */}
+              <div className="lg:col-span-1">
+                <section className="glass-card p-6 h-full border-red-100 bg-white/70 backdrop-blur-3xl shadow-xl space-y-6">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-red-500">
+                      <span className="text-xl">📍</span>
+                      <h2 className="text-lg font-black uppercase tracking-tighter">Your Hub</h2>
+                    </div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Fixed Departure point for missions</p>
+                  </div>
+
+                  <div className="space-y-4">
+                    <LocationPicker
+                      label="Deployment Origin"
+                      value={hubValue}
+                      onChange={(loc) => {
+                        setHubValue(loc); // Update local state always so typing isn't blocked
+
+                        // Only sync to server if we have valid coordinates
+                        if (!loc.lat || !loc.lng) return;
+
+                        api.patch("/auth/me", { homeLocation: loc })
+                          .then(() => {
+                            toast.success("Hub Coordinates Locked");
+                            refreshUser();
+                          })
+                          .catch((err) => {
+                            console.error("Hub Sync Error:", err);
+                            setHubValue(user.homeLocation || { address: "" }); // Revert on failure
+                            toast.error("Failed to sync Hub");
+                          });
+                      }}
+                      showFavorites={false}
+                    />
+                  </div>
+
+                  <div className="bg-red-50/50 p-4 rounded-2xl border border-red-100/50">
+                    <p className="text-[9px] font-black text-red-600 uppercase tracking-[0.2em] mb-1">Hub Protocol</p>
+                    <p className="text-[10px] font-bold text-gray-500 leading-relaxed uppercase">
+                      Setting a Hub allows drivers to find you faster on the grid. This location is your default pickup point.
+                    </p>
+                  </div>
+                </section>
               </div>
 
-              <PassengerRides />
-            </section>
+              {/* JOURNEYS SECTION */}
+              <div className="lg:col-span-2">
+                <section className="glass-card p-6 h-full bg-white/60 space-y-6">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center border-b border-gray-200/50 pb-4 gap-4">
+                    <div className="space-y-0.5">
+                      <h2 className="text-xl font-black text-gray-800 uppercase tracking-tighter">Your Journeys</h2>
+                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Active Manifests</p>
+                    </div>
+                    <button
+                      onClick={() => navigate("/find-ride")}
+                      className="px-6 py-2.5 bg-gray-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500 shadow-lg transition-all active:scale-95"
+                    >
+                      Find a Ride
+                    </button>
+                  </div>
+
+                  <PassengerRides />
+                </section>
+              </div>
+            </div>
 
             <div className="mt-4">
               <MetricsSummary />

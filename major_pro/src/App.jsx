@@ -11,6 +11,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import OrgAdmin from "./pages/OrgAdmin";
 import Profile from "./pages/Profile";
 import RideDetails from "./pages/RideDetails";
+import FriendsDashboard from "./pages/FriendsDashboard";
 
 export default function App() {
   return (
@@ -44,6 +45,14 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <RideDetails />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/friends"
+              element={
+                <ProtectedRoute>
+                  <FriendsDashboard />
                 </ProtectedRoute>
               }
             />

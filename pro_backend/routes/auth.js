@@ -86,17 +86,22 @@ router.get("/me", auth, async (req, res) => {
 router.patch("/me", auth, async (req, res) => {
   try {
     const { name, role } = req.body;
+    console.log(`Updating profile for user ${req.user.id}:`, req.body);
+
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    if (name) user.name = name;
-    if (role) user.role = role;
-    if (req.body.homeLocation) user.homeLocation = req.body.homeLocation;
-    if (req.body.workLocation) user.workLocation = req.body.workLocation;
+    if (name !== undefined) user.name = name;
+    if (role !== undefined) user.role = role;
+    if (req.body.homeLocation !== undefined) user.homeLocation = req.body.homeLocation;
+    if (req.body.workLocation !== undefined) user.workLocation = req.body.workLocation;
+    if (req.body.vehicleInfo !== undefined) user.vehicleInfo = req.body.vehicleInfo;
 
     await user.save();
+    console.log("Profile updated successfully");
     res.json({ message: "Profile updated", user });
   } catch (err) {
+    console.error("Profile update error:", err);
     res.status(500).json({ message: "Update failed" });
   }
 });

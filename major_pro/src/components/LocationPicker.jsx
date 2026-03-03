@@ -17,10 +17,10 @@ const defaultCenter = {
 
 const mapOptions = {
   disableDefaultUI: true,
-  zoomControl: true,
-  mapTypeControl: true,
-  streetViewControl: true,
-  fullscreenControl: true,
+  zoomControl: false, // Keep it super simple for preview
+  mapTypeControl: false,
+  streetViewControl: false,
+  fullscreenControl: false,
   styles: [
     {
       featureType: "poi",
@@ -30,7 +30,7 @@ const mapOptions = {
   ],
 };
 
-export default function LocationPicker({ label, onChange, initialValue, showFavorites = true }) {
+export default function LocationPicker({ label, onChange, value, showFavorites = true }) {
   const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
     libraries,
@@ -39,13 +39,17 @@ export default function LocationPicker({ label, onChange, initialValue, showFavo
   const { user } = useUser();
   const [marker, setMarker] = useState(null);
   const [map, setMap] = useState(null);
+  const [showMap, setShowMap] = useState(false);
   const autocompleteRef = useRef(null);
 
+  // Sync internal marker with external value
   useEffect(() => {
-    if (initialValue && initialValue.lat && initialValue.lng) {
-      setMarker({ lat: initialValue.lat, lng: initialValue.lng });
+    if (value && value.lat && value.lng) {
+      setMarker({ lat: value.lat, lng: value.lng });
+    } else {
+      setMarker(null);
     }
-  }, [initialValue]);
+  }, [value?.lat, value?.lng]);
 
   const onMapClick = useCallback((e) => {
     const lat = e.latLng.lat();
@@ -55,9 +59,11 @@ export default function LocationPicker({ label, onChange, initialValue, showFavo
   }, [onChange]);
 
   const onPlaceChanged = () => {
+    if (!autocompleteRef.current) return;
     const place = autocompleteRef.current.getPlace();
     if (!place.geometry || !place.geometry.location) {
-      toast.error("No location found for this place");
+      // If user typed something but didn't pick, try manual geocoding
+      handleManualSearch(value.address);
       return;
     }
 
@@ -67,9 +73,34 @@ export default function LocationPicker({ label, onChange, initialValue, showFavo
     };
 
     setMarker(loc);
-    map.panTo(loc);
-    map.setZoom(15);
-    onChange({ ...loc, address: place.formatted_address });
+    if (map) {
+      map.panTo(loc);
+      map.setZoom(16);
+    }
+    onChange({ ...loc, address: place.formatted_address || place.name });
+    setShowMap(true); // Keep map visible to confirm
+  };
+
+  const handleManualSearch = async (address) => {
+    if (!address || !window.google) return;
+    const geocoder = new window.google.maps.Geocoder();
+    geocoder.geocode({ address }, (results, status) => {
+      if (status === "OK" && results[0]) {
+        const loc = {
+          lat: results[0].geometry.location.lat(),
+          lng: results[0].geometry.location.lng(),
+        };
+        setMarker(loc);
+        if (map) {
+          map.panTo(loc);
+          map.setZoom(16);
+        }
+        onChange({ ...loc, address: results[0].formatted_address });
+        setShowMap(true);
+      } else {
+        toast.error("Location not found. Please be more specific.");
+      }
+    });
   };
 
   const setFavorite = (type) => {
@@ -89,6 +120,7 @@ export default function LocationPicker({ label, onChange, initialValue, showFavo
       map.setZoom(16);
     }
     onChange({ ...simplified, address: loc.address });
+    setShowMap(true);
     toast.success(`${type === 'home' ? '🏠 Home' : '💼 Work'} selected`);
   };
 
@@ -96,70 +128,99 @@ export default function LocationPicker({ label, onChange, initialValue, showFavo
     setMap(mapInstance);
   }, []);
 
-  if (loadError) return <div className="p-4 text-red-500 bg-red-50 rounded-xl">Error loading Google Maps</div>;
-  if (!isLoaded) return <div className="h-[300px] w-full bg-gray-100 animate-pulse rounded-xl flex items-center justify-center text-gray-400 font-medium italic">Loading Map...</div>;
+  if (loadError) return <div className="p-4 text-red-500 bg-red-50 rounded-xl font-bold uppercase text-[10px]">Error loading Maps</div>;
+  if (!isLoaded) return <div className="h-14 w-full bg-gray-50 animate-pulse rounded-2xl" />;
 
   return (
-    <div className="space-y-3 relative">
+    <div className="space-y-3 relative group">
       <div className="flex justify-between items-center px-1">
-        <p className="text-sm font-bold text-gray-700">{label}</p>
+        <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">{label}</label>
 
-        {showFavorites && user && (
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setFavorite('home')}
-              className="w-8 h-8 rounded-full bg-white shadow-md border border-gray-100 flex items-center justify-center hover:scale-110 active:scale-95 transition-all"
-              title="Home"
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setShowMap(!showMap)}
+            className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${showMap ? "bg-red-500 text-white shadow-lg shadow-red-200" : "bg-gray-100 text-gray-400 hover:bg-gray-200"
+              }`}
+            title="Toggle Map"
+          >
+            🗺️
+          </button>
+          {showFavorites && user && (
+            <>
+              <button
+                type="button"
+                onClick={() => setFavorite('home')}
+                className="w-8 h-8 rounded-xl bg-gray-100 text-gray-400 flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition-all font-bold"
+                title="Home"
+              >
+                🏠
+              </button>
+              <button
+                type="button"
+                onClick={() => setFavorite('work')}
+                className="w-8 h-8 rounded-xl bg-gray-100 text-gray-400 flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition-all font-bold"
+                title="Work"
+              >
+                💼
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="relative space-y-3">
+        <div className="relative group/input">
+          <Autocomplete
+            onLoad={(ref) => (autocompleteRef.current = ref)}
+            onPlaceChanged={onPlaceChanged}
+          >
+            <input
+              type="text"
+              value={value?.address || ""}
+              onChange={(e) => onChange({ address: e.target.value })} // Clear lat/lng on manual edit
+              placeholder={`Search ${label}...`}
+              className="w-full bg-white border-2 border-gray-100 p-4 pr-14 rounded-2xl text-sm font-bold text-gray-700 focus:outline-none focus:ring-4 focus:ring-red-500/10 focus:border-red-200 transition-all shadow-sm"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleManualSearch(value.address);
+                }
+              }}
+            />
+          </Autocomplete>
+          <button
+            type="button"
+            onClick={() => handleManualSearch(value.address)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-gray-50 text-gray-400 hover:bg-red-500 hover:text-white rounded-xl flex items-center justify-center transition-all"
+          >
+            🔍
+          </button>
+        </div>
+
+        {showMap && (
+          <div className="animate-in slide-in-from-top-4 duration-500 h-[220px] w-full rounded-2xl overflow-hidden border-2 border-gray-100 shadow-inner relative">
+            <GoogleMap
+              mapContainerStyle={{ height: "100%", width: "100%" }}
+              zoom={value?.lat ? 16 : 13}
+              center={marker || defaultCenter}
+              onClick={onMapClick}
+              onLoad={onLoad}
+              options={mapOptions}
             >
-              🏠
-            </button>
-            <button
-              type="button"
-              onClick={() => setFavorite('work')}
-              className="w-8 h-8 rounded-full bg-white shadow-md border border-gray-100 flex items-center justify-center hover:scale-110 active:scale-95 transition-all"
-              title="Work"
-            >
-              💼
-            </button>
+              {marker && (
+                <Marker
+                  position={marker}
+                  animation={window.google?.maps?.Animation?.DROP}
+                />
+              )}
+            </GoogleMap>
+            <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-lg border border-gray-100 shadow-sm pointer-events-none">
+              <p className="text-[10px] font-black text-gray-800 uppercase">Click to Lock Location</p>
+            </div>
           </div>
         )}
       </div>
-
-      <div className="relative group">
-        <Autocomplete
-          onLoad={(ref) => (autocompleteRef.current = ref)}
-          onPlaceChanged={onPlaceChanged}
-        >
-          <input
-            type="text"
-            placeholder="Search for a place..."
-            className="absolute top-4 left-4 right-4 z-10 p-3 rounded-xl border-none shadow-xl bg-white/95 backdrop-blur-sm text-sm font-medium focus:ring-2 focus:ring-red-500 transition-all outline-none"
-            onKeyDown={(e) => e.key === "Enter" && e.preventDefault()}
-          />
-        </Autocomplete>
-
-        <GoogleMap
-          mapContainerStyle={mapContainerStyle}
-          zoom={initialValue ? 15 : 13}
-          center={marker || defaultCenter}
-          onClick={onMapClick}
-          onLoad={onLoad}
-          options={mapOptions}
-          mapContainerClassName="rounded-2xl border border-gray-200 overflow-hidden shadow-sm"
-        >
-          {marker && window.google?.maps?.Animation && (
-            <Marker
-              position={marker}
-              animation={window.google.maps.Animation.DROP}
-            />
-          )}
-        </GoogleMap>
-      </div>
-
-      <p className="text-[10px] text-gray-400 font-medium ml-1">
-        Tip: Search above or drop a pin directly on the map
-      </p>
     </div>
   );
 }

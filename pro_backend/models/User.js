@@ -41,6 +41,13 @@ const UserSchema = new mongoose.Schema({
     lat: Number,
     lng: Number,
     address: String
+  },
+
+  // 🔹 Driver Vehicle Info
+  vehicleInfo: {
+    model: String,
+    color: String,
+    plateNumber: String
   }
 
 }, { timestamps: true });
