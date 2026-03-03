@@ -93,6 +93,8 @@ router.patch("/me", auth, async (req, res) => {
 
     if (name !== undefined) user.name = name;
     if (role !== undefined) user.role = role;
+    if (req.body.phoneNumber !== undefined) user.phoneNumber = req.body.phoneNumber;
+    if (req.body.employeeId !== undefined) user.employeeId = req.body.employeeId;
     if (req.body.homeLocation !== undefined) user.homeLocation = req.body.homeLocation;
     if (req.body.workLocation !== undefined) user.workLocation = req.body.workLocation;
     if (req.body.vehicleInfo !== undefined) user.vehicleInfo = req.body.vehicleInfo;
@@ -103,6 +105,58 @@ router.patch("/me", auth, async (req, res) => {
   } catch (err) {
     console.error("Profile update error:", err);
     res.status(500).json({ message: "Update failed" });
+  }
+});
+
+const { OAuth2Client } = require("google-auth-library");
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+// GOOGLE LOGIN
+router.post("/google-login", async (req, res) => {
+  try {
+    const { credential } = req.body;
+    const ticket = await client.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const { sub, email, name, picture } = ticket.getPayload();
+
+    let user = await User.findOne({
+      $or: [{ googleId: sub }, { email: email }]
+    });
+
+    if (!user) {
+      // Create new user
+      user = await User.create({
+        name,
+        email,
+        googleId: sub,
+        role: "passenger", // Default role
+        orgStatus: "none"
+      });
+    } else if (!user.googleId) {
+      // Link Google ID if user existed by email
+      user.googleId = sub;
+      await user.save();
+    }
+
+    const token = jwt.sign(
+      {
+        id: user._id,
+        email: user.email,
+        role: user.role,
+        organization: user.organization,
+        orgStatus: user.orgStatus,
+        isAdmin: user.isAdmin
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    res.json({ token, user });
+  } catch (err) {
+    console.error("GOOGLE LOGIN ERROR:", err);
+    res.status(400).json({ message: "Google login failed" });
   }
 });
 

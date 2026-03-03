@@ -9,6 +9,8 @@ export default function Profile() {
     const { user, refreshUser, loading: contextLoading } = useUser();
     const [name, setName] = useState("");
     const [role, setRole] = useState("");
+    const [phoneNumber, setPhoneNumber] = useState("");
+    const [employeeId, setEmployeeId] = useState("");
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [vehicleInfo, setVehicleInfo] = useState({ model: "", color: "", plateNumber: "" });
@@ -27,6 +29,8 @@ export default function Profile() {
         if (user && !hasInitialized.current) {
             setName(user.name || "");
             setRole(user.role || "");
+            setPhoneNumber(user.phoneNumber || "");
+            setEmployeeId(user.employeeId || "");
             setHomeLoc(user.homeLocation);
             setWorkLoc(user.workLocation);
             setVehicleInfo(user.vehicleInfo || { model: "", color: "", plateNumber: "" });
@@ -43,6 +47,8 @@ export default function Profile() {
             await api.patch("/auth/me", {
                 name,
                 role,
+                phoneNumber,
+                employeeId,
                 vehicleInfo,
                 homeLocation: homeLoc,
                 workLocation: workLoc
@@ -104,14 +110,37 @@ export default function Profile() {
 
                         {editingIdentity ? (
                             <form className="space-y-6 animate-in zoom-in-95 duration-300">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Full Name</label>
+                                        <input
+                                            type="text"
+                                            value={name}
+                                            onChange={(e) => setName(e.target.value)}
+                                            className="w-full bg-white border-2 border-gray-100 p-4 rounded-2xl text-sm font-bold text-gray-700 focus:outline-none focus:ring-4 focus:ring-red-500/10 focus:border-red-200 transition-all shadow-sm"
+                                            placeholder="Your Name"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Employee ID</label>
+                                        <input
+                                            type="text"
+                                            value={employeeId}
+                                            onChange={(e) => setEmployeeId(e.target.value)}
+                                            className="w-full bg-white border-2 border-gray-100 p-4 rounded-2xl text-sm font-bold text-gray-700 focus:outline-none focus:ring-4 focus:ring-red-500/10 focus:border-red-200 transition-all shadow-sm"
+                                            placeholder="EMP-123"
+                                        />
+                                    </div>
+                                </div>
+
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Full Name</label>
+                                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Phone Number</label>
                                     <input
-                                        type="text"
-                                        value={name}
-                                        onChange={(e) => setName(e.target.value)}
+                                        type="tel"
+                                        value={phoneNumber}
+                                        onChange={(e) => setPhoneNumber(e.target.value)}
                                         className="w-full bg-white border-2 border-gray-100 p-4 rounded-2xl text-sm font-bold text-gray-700 focus:outline-none focus:ring-4 focus:ring-red-500/10 focus:border-red-200 transition-all shadow-sm"
-                                        placeholder="Your Name"
+                                        placeholder="+91 98765 43210"
                                     />
                                 </div>
                                 <div className="space-y-2">
@@ -152,6 +181,14 @@ export default function Profile() {
                                     <span className="text-[10px] px-3 py-1 bg-red-50 text-red-600 rounded-lg font-black uppercase tracking-widest">
                                         {role}
                                     </span>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Phone</p>
+                                    <p className="text-sm font-bold text-gray-800">{phoneNumber || "Not set"}</p>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Emp ID</p>
+                                    <p className="text-sm font-bold text-gray-800">{employeeId || "Not set"}</p>
                                 </div>
                             </div>
                         )}
