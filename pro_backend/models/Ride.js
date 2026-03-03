@@ -58,7 +58,7 @@ const RideSchema = new mongoose.Schema({
   vehicleInfo: {
     model: String,
     color: String,
-    licensePlate: String
+    plateNumber: String
   }
 
 }, { timestamps: true });

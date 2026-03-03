@@ -57,6 +57,44 @@ router.post("/accept/:userId", auth, async (req, res) => {
 });
 
 
+// GET ALL USERS FOR DISCOVERY
+router.get("/users", auth, async (req, res) => {
+  try {
+    const currentUser = await User.findById(req.user.id);
+
+    // Find all users EXCEPT the current user
+    const users = await User.find({ _id: { $ne: req.user.id } })
+      .select("name email role organization")
+      .populate("organization", "name");
+
+    // Add connection status
+    const usersWithStatus = users.map(u => {
+      let status = "none";
+      if (currentUser.friends.includes(u._id)) {
+        status = "friends";
+      } else if (currentUser.friendRequests.includes(u._id)) {
+        status = "request_received";
+      } else if (u.friendRequests && u.friendRequests.includes(currentUser._id)) {
+        status = "request_sent"; // Requires looking at the other user's array, but we can do it efficiently
+      }
+
+      return {
+        _id: u._id,
+        name: u.name,
+        email: u.email,
+        role: u.role,
+        organization: u.organization,
+        status
+      };
+    });
+
+    res.json(usersWithStatus);
+  } catch (err) {
+    console.error("GET USERS ERROR:", err);
+    res.status(500).json({ message: "Failed to fetch users" });
+  }
+});
+
 // GET FRIEND LIST
 router.get("/", auth, async (req, res) => {
   const user = await User.findById(req.user.id)

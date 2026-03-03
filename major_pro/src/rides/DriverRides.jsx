@@ -54,9 +54,23 @@ function DriverRideCard({ ride, onUpdateStatus, onDelete }) {
           </span>
         </div>
 
-        <div className="space-y-1">
-          <p className="text-sm font-bold text-gray-800 truncate">🚩 {ride.startLocation?.address}</p>
-          <p className="text-xs text-gray-500 font-medium truncate">🏁 {ride.endLocation?.address}</p>
+        <div className="flex justify-between items-end">
+          <div className="space-y-1">
+            <p className="text-sm font-bold text-gray-800 truncate">🚩 {ride.startLocation?.address}</p>
+            <p className="text-xs text-gray-500 font-medium truncate">🏁 {ride.endLocation?.address}</p>
+          </div>
+          <div className="flex -space-x-2">
+            {ride.passengers?.slice(0, 3).map((p, i) => (
+              <div key={i} className="w-8 h-8 rounded-full bg-red-100 border-2 border-white flex items-center justify-center text-[10px] font-black text-red-600 shadow-sm" title={p.name}>
+                {p.name?.charAt(0)}
+              </div>
+            ))}
+            {(ride.passengers?.length || 0) > 3 && (
+              <div className="w-8 h-8 rounded-full bg-gray-100 border-2 border-white flex items-center justify-center text-[8px] font-black text-gray-400 shadow-sm">
+                +{(ride.passengers?.length || 0) - 3}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="flex flex-col gap-2 pt-2">
