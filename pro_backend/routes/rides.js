@@ -42,6 +42,43 @@ const haversineDistance = (lat1, lon1, lat2, lon2) => {
   return parseFloat((R * c).toFixed(2));
 };
 
+const triggerAiReroute = async (rideId) => {
+  try {
+    const Ride = require("../models/Ride");
+    const ride = await Ride.findById(rideId).populate("passengers", "homeLocation");
+    if (!ride) return;
+
+    const passengerHubs = ride.passengers
+      .filter(p => p.homeLocation && p.homeLocation.lat)
+      .map(p => ({
+        lat: p.homeLocation.lat,
+        lng: p.homeLocation.lng,
+        address: p.homeLocation.address
+      }));
+
+    const aiUrl = process.env.AI_SERVICE_URL || "http://localhost:8000/optimize-route";
+    const payload = {
+      driver_start: ride.startLocation,
+      driver_end: ride.endLocation,
+      passengers: passengerHubs,
+      mode: ride.visibility,
+      preference: ride.optimizationPreference || "fastest"
+    };
+
+    console.log("TRIGGERING AI REROUTE for ride:", rideId);
+    const aiRes = await axios.post(aiUrl, payload);
+
+    if (aiRes.data && aiRes.data.route_polyline) {
+      ride.routePolyline = aiRes.data.route_polyline;
+      ride.estimatedDuration = aiRes.data.estimated_duration;
+      await ride.save();
+      console.log("OSRM STREET ROUTE UPDATED:", ride.estimatedDuration);
+    }
+  } catch (err) {
+    console.error("AI REROUTE FAILED:", err.response?.data || err.message);
+  }
+};
+
 /* ===========================
    CREATE RIDE
 =========================== */
@@ -197,15 +234,83 @@ router.post("/:id/request", auth, async (req, res) => {
     return res.status(400).json({ message: "No seats left" });
   }
 
-  if (ride.passengers.includes(req.user.id)) {
-    return res.status(400).json({ message: "Already joined this ride" });
+  if (ride.passengers.includes(req.user.id) || ride.pendingPassengers.includes(req.user.id)) {
+    return res.status(400).json({ message: "Already requested or joined this ride" });
   }
 
-  ride.passengers.push(req.user.id);
-  ride.seats -= 1;
+  ride.pendingPassengers.push(req.user.id);
+  // seats are only decremented upon approval now!
 
   await ride.save();
-  res.json({ message: "Joined ride successfully" });
+  res.json({ message: "Join request sent to driver" });
+});
+
+/* ===========================
+   APPROVE PASSENGER
+=========================== */
+router.post("/:id/approve", auth, async (req, res) => {
+  try {
+    const { passengerId } = req.body;
+    const ride = await Ride.findById(req.params.id);
+
+    if (!ride) return res.status(404).json({ message: "Ride not found" });
+
+    // Only driver can approve
+    if (ride.driver.toString() !== req.user.id) {
+      return res.status(403).json({ message: "Only the driver can approve passengers" });
+    }
+
+    if (!ride.pendingPassengers.includes(passengerId)) {
+      return res.status(400).json({ message: "Passenger not in pending list" });
+    }
+
+    if (ride.seats <= 0) {
+      return res.status(400).json({ message: "No seats left to approve new passenger" });
+    }
+
+    // Move from pending to active
+    ride.pendingPassengers = ride.pendingPassengers.filter(p => p.toString() !== passengerId);
+    ride.passengers.push(passengerId);
+    ride.seats -= 1;
+
+    await ride.save();
+
+    // TRIGGER AI REROUTE
+    triggerAiReroute(ride._id);
+
+    res.json({ message: "Passenger approved and route optimizing...", ride });
+  } catch (err) {
+    res.status(500).json({ message: "Approval failed" });
+  }
+});
+
+/* ===========================
+   TRIGGER MANUAL REROUTE
+=========================== */
+router.post("/:id/reroute", auth, async (req, res) => {
+  try {
+    const ride = await Ride.findById(req.params.id);
+    if (!ride) return res.status(404).json({ message: "Ride not found" });
+
+    // Allow driver or approved passengers to trigger
+    const isDriver = ride.driver.toString() === req.user.id;
+    const isPassenger = ride.passengers.includes(req.user.id);
+
+    if (!isDriver && !isPassenger) {
+      return res.status(403).json({ message: "Only participants can trigger reroute" });
+    }
+
+    const { preference } = req.body;
+    if (preference) {
+      ride.optimizationPreference = preference;
+      await ride.save();
+    }
+
+    await triggerAiReroute(ride._id);
+    res.json({ message: `AI Reroute triggered (${ride.optimizationPreference})`, preference: ride.optimizationPreference });
+  } catch (err) {
+    res.status(500).json({ message: "Reroute trigger failed" });
+  }
 });
 
 /* ===========================
@@ -344,8 +449,9 @@ router.get("/driver", auth, async (req, res) => {
 router.get("/:id", auth, async (req, res) => {
   try {
     const ride = await Ride.findById(req.params.id)
-      .populate("driver", "name email")
-      .populate("passengers", "name email");
+      .populate("driver", "name email vehicleInfo")
+      .populate("passengers", "name email homeLocation")
+      .populate("pendingPassengers", "name email homeLocation");
 
     if (!ride) return res.status(404).json({ message: "Ride not found" });
     res.json(ride);

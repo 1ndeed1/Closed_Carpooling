@@ -34,6 +34,10 @@ const RideSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "User"
   }],
+  pendingPassengers: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User"
+  }],
 
   visibility: {
     type: String,
@@ -59,6 +63,12 @@ const RideSchema = new mongoose.Schema({
     model: String,
     color: String,
     plateNumber: String
+  },
+
+  optimizationPreference: {
+    type: String,
+    enum: ["fastest", "shortest"],
+    default: "fastest"
   }
 
 }, { timestamps: true });

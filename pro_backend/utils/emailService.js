@@ -43,13 +43,13 @@ const sendOtpEmail = async (email, otp) => {
           <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
             <h2 style="color: #ef4444; text-align: center;">RideNet</h2>
             <p>Hello,</p>
-            <p>You requested to join an organization on SlipStream. Please use the following One-Time Password (OTP) to verify your account:</p>
+            <p>You requested to join an organization on RideNet. Please use the following One-Time Password (OTP) to verify your account:</p>
             <div style="background: #fdf2f2; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #ef4444; border-radius: 8px; margin: 20px 0;">
               ${otp}
             </div>
             <p>This OTP is valid for 10 minutes. If you did not request this, please ignore this email.</p>
             <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-            <p style="font-size: 12px; color: #666; text-align: center;">&copy; 2026 SlipStream Carpooling. All rights reserved.</p>
+            <p style="font-size: 12px; color: #666; text-align: center;">&copy; 2026 RideNet Carpooling. All rights reserved.</p>
           </div>
         `,
         };

@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+ortools
+python-jose[cryptography]
+pydantic
+numpy
+pandas
+scikit-learn
+xgboost
+python-dotenv
+requests
+polyline
